@@ -972,7 +972,7 @@ def clean():
     if delete_tags_check.get(): processes_number += 1
     if replace_custom_check.get(): processes_number += 1
     update_counter_text(process_counter, processes_number)
-    process_counter_label.grid(row=10, column=0, columnspan=5, pady=(20,5))
+    process_counter_label.grid(row=11, column=0, columnspan=5, pady=(20,5))
 
     if delete_columns_check.get():
         process_counter += 1
@@ -994,6 +994,11 @@ def clean():
         update_counter_text(process_counter, processes_number)
         replace_custom(ws)
 
+    if replace_letters_check.get():
+        process_counter += 1
+        update_counter_text(process_counter, processes_number)
+        replace_sku_letters(ws)
+
     save_workbook(wb)
 
     print("Done!")
@@ -1001,6 +1006,9 @@ def clean():
     open_button['state'] = 'normal'
     workbook_field['state'] = 'normal'
     messagebox.showinfo(title="Очистка", message="Готово!")
+
+def replace_sku_letters():
+    pass
 
 def delete_columns(ws):
     progress["maximum"] = ws.max_column
@@ -1086,7 +1094,7 @@ def edit_custom():
 
 window = Tk()
 window.title('XL Cleaner')
-window.geometry('500x380')
+window.geometry('500x410')
 window.resizable(0, 0)
 
 secondary_button_style = Style()
@@ -1138,17 +1146,22 @@ replace_custom_checkbutton.grid(row=7, column=0, columnspan=2, pady=(5,5), padx=
 edit_custom_button = Button(window, text="Редактировать", command=edit_custom, state = 'disabled', style='secondary.TButton')
 edit_custom_button.grid(row=7, column=1, columnspan=2, ipady=0, ipadx=0)
 
+replace_letters_check = BooleanVar()
+replace_letters_check.set(False)
+replace_letters_checkbutton = Checkbutton(window, variable=replace_letters_check, onvalue=True, offvalue=False, text='Заменить буквы в sku')
+replace_letters_checkbutton.grid(row=8, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
+
 rewrite_check = BooleanVar()
 rewrite_check.set(False)
 rewrite_checkbutton = Checkbutton(window, variable=rewrite_check, onvalue=True, offvalue=False, text='Сохранить в исходный файл')
-rewrite_checkbutton.grid(row=8, column=0, columnspan=5, pady=(5,20), padx=16, sticky="w")
+rewrite_checkbutton.grid(row=9, column=0, columnspan=5, pady=(5,20), padx=16, sticky="w")
 
 clean_button = Button(window, text="ЗАПУСК", command=clean)
-clean_button.grid(row=9, column=0, columnspan=5)
+clean_button.grid(row=10, column=0, columnspan=5)
 
 progress = Progressbar(window, orient='horizontal', length=490, mode = 'determinate')
 progress['value'] = 0
-progress.grid(row=10, column=0, columnspan=5, padx=5, pady=(20,5))
+progress.grid(row=11, column=0, columnspan=5, padx=5, pady=(20,5))
 
 counter_text = StringVar()
 counter_text.set('counter')
