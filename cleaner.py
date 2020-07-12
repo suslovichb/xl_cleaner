@@ -913,6 +913,62 @@ codes_dict = {
 '&ndash': '–'
 }
 
+sku_letters_dict = {
+"," : "//0044",
+'A' : '//0065',
+'B' : '//0066',
+'C' : '//0067',
+'D' : '//0068',
+'E' : '//0069',
+'F' : '//0070',
+'G' : '//0071',
+'H' : '//0072',
+'I' : '//0073',
+'J' : '//0074',
+'K' : '//0075',
+'L' : '//0076',
+'M' : '//0077',
+'N' : '//0078',
+'O' : '//0079',
+'P' : '//0080',
+'Q' : '//0081',
+'R' : '//0082',
+'S' : '//0083',
+'T' : '//0084',
+'U' : '//0085',
+'V' : '//0086',
+'W' : '//0087',
+'X' : '//0088',
+'Y' : '//0089',
+'Z' : '//0090',
+'a' : '//0097',
+'b' : '//0098',
+'c' : '//0099',
+'d' : '//0100',
+'e' : '//0101',
+'f' : '//0102',
+'g' : '//0103',
+'h' : '//0104',
+'i' : '//0105',
+'j' : '//0106',
+'k' : '//0107',
+'l' : '//0108',
+'m' : '//0109',
+'n' : '//0110',
+'o' : '//0111',
+'p' : '//0112',
+'q' : '//0113',
+'r' : '//0114',
+'s' : '//0115',
+'t' : '//0116',
+'u' : '//0117',
+'v' : '//0118',
+'w' : '//0119',
+'x' : '//0120',
+'y' : '//0121',
+'z' : '//0122'
+}
+
 def get_workbook():
     try:
         filename = workbook_field.get(1.0, 'end').replace('\n','')
@@ -971,6 +1027,7 @@ def clean():
     if replace_codes_check.get(): processes_number += 1
     if delete_tags_check.get(): processes_number += 1
     if replace_custom_check.get(): processes_number += 1
+    if replace_letters_check.get(): processes_number += 1
     update_counter_text(process_counter, processes_number)
     process_counter_label.grid(row=11, column=0, columnspan=5, pady=(20,5))
 
@@ -1007,8 +1064,31 @@ def clean():
     workbook_field['state'] = 'normal'
     messagebox.showinfo(title="Очистка", message="Готово!")
 
-def replace_sku_letters():
-    pass
+def find_col_index(ws, col_name):
+    for cell in ws[1]:
+        if cell.value == col_name:
+            return cell.col_idx-1
+
+
+def replace_sku_letters(ws):
+    progress['maximum'] = ws.max_row - 2
+    progress['value'] = 0
+    col_num = find_col_index(ws, 'sku') + 1
+    if not col_num:
+        messagebox.showerror(title="Ошибка", message="Столбец sku не найден")
+        return
+    print(col_num)
+    for row_num in range(2, ws.max_row):
+        cell = ws.cell(row_num, col_num)
+        if cell.value:
+            for letter, code in sku_letters_dict.items():
+                print(cell.value)
+                cell.value = str(cell.value).replace(letter, code)
+                print(cell.value)
+        progress['value'] += 1
+        progress.update()
+            # cell.value = str(cell.value).replace()
+        # replace_in_cell(cell, sku_letters_dict)
 
 def delete_columns(ws):
     progress["maximum"] = ws.max_column
