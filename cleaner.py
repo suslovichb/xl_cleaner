@@ -5,6 +5,7 @@ import re
 from os import path, system
 
 REPLACEMENTS_PATH = "replacements.txt"
+SORT_SCHEME_PATH = "sort_scheme.txt"
 
 codes_dict = {
 '&#09;': ' ',
@@ -969,6 +970,54 @@ sku_letters_dict = {
 'z' : '//0122'
 }
 
+
+text_formatting_tags = [
+'<b>',
+'</b>',
+'<strong>',
+'</strong>',
+'<i>',
+'</i>',
+'<em>',
+'</em>',
+'<u>',
+'</u>',
+'<tt>',
+'</tt>',
+'<s>',
+'</s>',
+'<big>',
+'</big>',
+'<small>',
+'</small>',
+'<font>',
+'</font>',
+'<center>',
+'</center>',
+'<sup>',
+'</sup>',
+'<sub>',
+'</sub>'
+]
+
+table_tags = [
+'<table>',
+'</table>',
+'<tr>',
+'</tr>',
+'<th>',
+'</th>',
+'<td>',
+'</td>'
+]
+
+necessary_tags = [
+'<br>',
+'<h3>',
+*text_formatting_tags,
+*table_tags
+]
+
 def get_workbook():
     try:
         filename = workbook_field.get(1.0, 'end').replace('\n','')
@@ -1029,7 +1078,7 @@ def clean():
     if replace_custom_check.get(): processes_number += 1
     if replace_letters_check.get(): processes_number += 1
     update_counter_text(process_counter, processes_number)
-    process_counter_label.grid(row=11, column=0, columnspan=5, pady=(20,5))
+    process_counter_label.grid(row=13, column=0, columnspan=5, pady=(20,5))
 
     if delete_columns_check.get():
         process_counter += 1
@@ -1087,8 +1136,6 @@ def replace_sku_letters(ws):
                 print(cell.value)
         progress['value'] += 1
         progress.update()
-            # cell.value = str(cell.value).replace()
-        # replace_in_cell(cell, sku_letters_dict)
 
 def delete_columns(ws):
     progress["maximum"] = ws.max_column
@@ -1152,7 +1199,9 @@ def delete_tags(ws):
 def delete_tags_in_cell(cell):
     for code, character in codes_dict.items():
         if cell.value:
-            cell.value = re.sub('(?!<br>)(<.*?>)',' ',str(cell.value))
+            # cell.value = re.sub('(?!<br>)(<.*?>)',' ',str(cell.value))
+            cell.value = re.sub('(?!{})(<.*?>)'.format('|'.join(necessary_tags)),'<br>',str(cell.value))
+            cell.value = re.sub('<br><br>+','<br>',str(cell.value))
 
 def save_workbook(wb):
     filename = workbook_field.get(1.0, 'end').replace('\n','')
@@ -1172,9 +1221,20 @@ def edit_custom():
         with open(REPLACEMENTS_PATH, 'w'): pass
     system('start ' + REPLACEMENTS_PATH)
 
+def toggle_edit_sort_button():
+    if sort_columns_check.get():
+        edit_sort_button['state'] = 'normal'
+    else:
+        edit_sort_button['state'] = 'disabled'
+
+def edit_sort():
+    if not path.isfile(SORT_SCHEME_PATH):
+        with open(SORT_SCHEME_PATH, 'w'): pass
+    system('start ' + SORT_SCHEME_PATH)
+
 window = Tk()
 window.title('XL Cleaner')
-window.geometry('500x410')
+window.geometry('500x470')
 window.resizable(0, 0)
 
 secondary_button_style = Style()
@@ -1231,17 +1291,30 @@ replace_letters_check.set(False)
 replace_letters_checkbutton = Checkbutton(window, variable=replace_letters_check, onvalue=True, offvalue=False, text='Заменить буквы в sku')
 replace_letters_checkbutton.grid(row=8, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
 
+sort_columns_check = BooleanVar()
+sort_columns_check.set(False)
+sort_columns_checkbutton = Checkbutton(window, variable=sort_columns_check, onvalue=True, offvalue=False, text='Сортировать столбцы', command=toggle_edit_sort_button)
+sort_columns_checkbutton.grid(row=9, column=0, columnspan=2, pady=(5,5), padx=16, sticky="w")
+
+edit_sort_button = Button(window, text="Схема", command=edit_sort, state = 'disabled', style='secondary.TButton')
+edit_sort_button.grid(row=9, column=1, columnspan=2, ipady=0, ipadx=0)
+
+format_sheet_check = BooleanVar()
+format_sheet_check.set(False)
+format_sheet_checkbutton = Checkbutton(window, variable=format_sheet_check, onvalue=True, offvalue=False, text='Форматировать')
+format_sheet_checkbutton.grid(row=10, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
+
 rewrite_check = BooleanVar()
 rewrite_check.set(False)
 rewrite_checkbutton = Checkbutton(window, variable=rewrite_check, onvalue=True, offvalue=False, text='Сохранить в исходный файл')
-rewrite_checkbutton.grid(row=9, column=0, columnspan=5, pady=(5,20), padx=16, sticky="w")
+rewrite_checkbutton.grid(row=11, column=0, columnspan=5, pady=(5,20), padx=16, sticky="w")
 
 clean_button = Button(window, text="ЗАПУСК", command=clean)
-clean_button.grid(row=10, column=0, columnspan=5)
+clean_button.grid(row=12, column=0, columnspan=5)
 
 progress = Progressbar(window, orient='horizontal', length=490, mode = 'determinate')
 progress['value'] = 0
-progress.grid(row=11, column=0, columnspan=5, padx=5, pady=(20,5))
+progress.grid(row=13, column=0, columnspan=5, padx=5, pady=(20,5))
 
 counter_text = StringVar()
 counter_text.set('counter')
