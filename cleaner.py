@@ -1,11 +1,11 @@
 from tkinter import Tk, Text, StringVar, BooleanVar, _setit, messagebox, filedialog
 from tkinter.ttk import Style, Label, Button, OptionMenu, Checkbutton, Progressbar
-from openpyxl import load_workbook, Workbook
+from openpyxl import load_workbook, Workbook, utils
 import re
 from os import path, system
 
 REPLACEMENTS_PATH = "replacements.txt"
-SORT_SCHEME_PATH = "sort_scheme.txt"
+SORT_SETTINGS_PATH = "sorting.txt"
 
 codes_dict = {
 '&#09;': ' ',
@@ -1077,6 +1077,8 @@ def clean():
     if delete_tags_check.get(): processes_number += 1
     if replace_custom_check.get(): processes_number += 1
     if replace_letters_check.get(): processes_number += 1
+    if sort_columns_check.get(): processes_number += 1
+
     update_counter_text(process_counter, processes_number)
     process_counter_label.grid(row=13, column=0, columnspan=5, pady=(20,5))
 
@@ -1105,6 +1107,11 @@ def clean():
         update_counter_text(process_counter, processes_number)
         replace_sku_letters(ws)
 
+    if sort_columns_check.get():
+        process_counter += 1
+        update_counter_text(process_counter, processes_number)
+        sort_columns(ws)
+
     save_workbook(wb)
 
     print("Done!")
@@ -1116,24 +1123,20 @@ def clean():
 def find_col_index(ws, col_name):
     for cell in ws[1]:
         if cell.value == col_name:
-            return cell.col_idx-1
-
+            return cell.col_idx
 
 def replace_sku_letters(ws):
     progress['maximum'] = ws.max_row - 2
     progress['value'] = 0
-    col_num = find_col_index(ws, 'sku') + 1
+    col_num = find_col_index(ws, 'sku')
     if not col_num:
         messagebox.showerror(title="Ошибка", message="Столбец sku не найден")
         return
-    print(col_num)
     for row_num in range(2, ws.max_row):
         cell = ws.cell(row_num, col_num)
         if cell.value:
             for letter, code in sku_letters_dict.items():
-                print(cell.value)
                 cell.value = str(cell.value).replace(letter, code)
-                print(cell.value)
         progress['value'] += 1
         progress.update()
 
@@ -1180,7 +1183,6 @@ def replace_custom(ws):
         return
 
     if custom_dict:
-        print(custom_dict)
         for row in ws.iter_rows():
             row = tuple([replace_in_cell(cell, custom_dict) for cell in row])
             progress['value'] += 1
@@ -1199,7 +1201,6 @@ def delete_tags(ws):
 def delete_tags_in_cell(cell):
     for code, character in codes_dict.items():
         if cell.value:
-            # cell.value = re.sub('(?!<br>)(<.*?>)',' ',str(cell.value))
             cell.value = re.sub('(?!{})(<.*?>)'.format('|'.join(necessary_tags)),'<br>',str(cell.value))
             cell.value = re.sub('<br><br>+','<br>',str(cell.value))
 
@@ -1228,9 +1229,86 @@ def toggle_edit_sort_button():
         edit_sort_button['state'] = 'disabled'
 
 def edit_sort():
-    if not path.isfile(SORT_SCHEME_PATH):
-        with open(SORT_SCHEME_PATH, 'w'): pass
-    system('start ' + SORT_SCHEME_PATH)
+    if not path.isfile(SORT_SETTINGS_PATH):
+        with open(SORT_SETTINGS_PATH, 'w'): pass
+    system('start ' + SORT_SETTINGS_PATH)
+
+def sort_columns(ws):
+    progress['value'] = 0
+    progress['maximum'] = 5
+
+    settings = {}
+    try:
+        f = open(SORT_SETTINGS_PATH, 'r', encoding='utf8')
+        text = f.read()
+        text = text.replace('\n', '')
+        ###############################################
+        text = re.sub(r' *([,:;]) *', r'\g<1>', text)
+        ###############################################
+        arr = text.split(';')
+        f.close()
+        for item in arr:
+            if ':' in item:
+                pair = item.split(':',1)
+                settings[pair[0]] = pair[1].split(',')
+    except FileNotFoundError:
+        messagebox.showerror(title="Ошибка", message="Файл сортировки не обнаружен")
+        return
+    except:
+        messagebox.showerror(title="Ошибка", message="Ошибка сортировки")
+        return
+
+    try:
+        ordered_attributes = settings['priority_attributes']
+        trash_attributes = settings['trash_attributes']
+    except:
+        messagebox.showerror(title="Сортировка", message="Некорректные настройки сортировки")
+        return
+
+    progress['value'] = 1
+
+    pic_headers = [cell.value for cell in ws[1] if bool(re.search(r'^\d+_picture$', str(cell.value)))]
+    pic_headers.sort()
+    for header in reversed(pic_headers):
+        ws.insert_cols(1,1)
+        col_num = find_col_index(ws, header)
+        column = ws[utils.get_column_letter(col_num)]
+        for row_num, cell in enumerate(column):
+            ws['A'][row_num].value = cell.value
+        ws.delete_cols(col_num)
+
+    progress['value'] = 2
+
+    for attribute in reversed(ordered_attributes):
+        ws.insert_cols(1,1)
+        col_num = find_col_index(ws, attribute)
+        if col_num:
+            column = ws[utils.get_column_letter(col_num)]
+            for row_num, cell in enumerate(column):
+                ws['A'][row_num].value = cell.value
+            ws.delete_cols(col_num)
+        else:
+            ws['A'][0].value = attribute
+
+    progress['value'] = 3
+
+    ws[utils.get_column_letter(ws.max_column+1)][0].value = 'МУСОР'
+    for row in ws.iter_rows(min_row=2):
+        row[ws.max_column-1].value = '|'
+
+    progress['value'] = 4
+
+    for attribute in trash_attributes:
+        col_num = find_col_index(ws, attribute)
+        if col_num:
+            column = ws[utils.get_column_letter(col_num)]
+            write_column_letter = utils.get_column_letter(ws.max_column+1)
+            for row_num, cell in enumerate(column):
+                ws[write_column_letter][row_num].value = cell.value
+            ws.delete_cols(col_num)
+
+    progress['value'] = 5
+
 
 window = Tk()
 window.title('XL Cleaner')
@@ -1296,13 +1374,14 @@ sort_columns_check.set(False)
 sort_columns_checkbutton = Checkbutton(window, variable=sort_columns_check, onvalue=True, offvalue=False, text='Сортировать столбцы', command=toggle_edit_sort_button)
 sort_columns_checkbutton.grid(row=9, column=0, columnspan=2, pady=(5,5), padx=16, sticky="w")
 
-edit_sort_button = Button(window, text="Схема", command=edit_sort, state = 'disabled', style='secondary.TButton')
+edit_sort_button = Button(window, text="Настройки", command=edit_sort, state = 'disabled', style='secondary.TButton')
 edit_sort_button.grid(row=9, column=1, columnspan=2, ipady=0, ipadx=0)
 
 format_sheet_check = BooleanVar()
 format_sheet_check.set(False)
 format_sheet_checkbutton = Checkbutton(window, variable=format_sheet_check, onvalue=True, offvalue=False, text='Форматировать')
 format_sheet_checkbutton.grid(row=10, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
+format_sheet_checkbutton['state'] = 'disabled'
 
 rewrite_check = BooleanVar()
 rewrite_check.set(False)
