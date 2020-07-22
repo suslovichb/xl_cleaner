@@ -1,6 +1,9 @@
 from tkinter import Tk, Text, StringVar, BooleanVar, _setit, messagebox, filedialog
 from tkinter.ttk import Style, Label, Button, OptionMenu, Checkbutton, Progressbar
-from openpyxl import load_workbook, Workbook, utils
+from openpyxl import load_workbook, Workbook
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font, Alignment, PatternFill, Side
+from openpyxl.styles.borders import Border
 import re
 from os import path, system
 
@@ -1021,12 +1024,12 @@ necessary_tags = [
 def get_workbook():
     try:
         filename = workbook_field.get(1.0, 'end').replace('\n','')
+        if format_sheet_check.get():
+            return load_workbook(filename, data_only=True)
         return load_workbook(filename)
     except Exception:
         messagebox.showerror(title="Ошибка", message="Ошибка загрузки. Проверьте данные")
-        clean_button['state'] = 'normal'
-        open_button['state'] = 'normal'
-        workbook_field['state'] = 'normal'
+        enable_buttons()
 
 def choose_file():
     choosed_file = filedialog.askopenfilename(filetypes=(("Excel files", "*.xlsx"),("All files","*.*")))
@@ -1052,10 +1055,20 @@ def worksheet_changed(*args):
 def update_counter_text(current, total):
     counter_text.set('{}/{}'.format(current, total))
 
-def clean():
+def disable_buttons():
     clean_button['state'] = 'disabled'
     open_button['state'] = 'disabled'
-    workbook_field['state'] = 'disabled'
+    edit_custom_button['state'] = 'disabled'
+    edit_sort_button['state'] = 'disabled'
+
+def enable_buttons():
+    clean_button['state'] = 'normal'
+    open_button['state'] = 'normal'
+    edit_custom_button['state'] = 'normal'
+    edit_sort_button['state'] = 'normal'
+
+def clean():
+    disable_buttons()
     progress['value'] = 0
     process_counter = 0
     processes_number = 0
@@ -1067,9 +1080,7 @@ def clean():
         ws = wb[sheet_to_read]
     except Exception:
         messagebox.showerror(title="Ошибка", message="Ошибка загрузки. Проверьте данные")
-        clean_button['state'] = 'normal'
-        open_button['state'] = 'normal'
-        workbook_field['state'] = 'normal'
+        enable_buttons()
         return
 
     if delete_columns_check.get(): processes_number += 1
@@ -1078,6 +1089,12 @@ def clean():
     if replace_custom_check.get(): processes_number += 1
     if replace_letters_check.get(): processes_number += 1
     if sort_columns_check.get(): processes_number += 1
+    if format_sheet_check.get(): processes_number += 1
+
+    if processes_number == 0:
+        messagebox.showerror(title="Ошибка", message="Выберите способы обратботки")
+        enable_buttons()
+        return
 
     update_counter_text(process_counter, processes_number)
     process_counter_label.grid(row=13, column=0, columnspan=5, pady=(20,5))
@@ -1112,12 +1129,15 @@ def clean():
         update_counter_text(process_counter, processes_number)
         sort_columns(ws)
 
+    if format_sheet_check.get():
+        process_counter += 1
+        update_counter_text(process_counter, processes_number)
+        format_sheet(ws)
+
     save_workbook(wb)
 
     print("Done!")
-    clean_button['state'] = 'normal'
-    open_button['state'] = 'normal'
-    workbook_field['state'] = 'normal'
+    enable_buttons()
     messagebox.showinfo(title="Очистка", message="Готово!")
 
 def find_col_index(ws, col_name):
@@ -1272,7 +1292,7 @@ def sort_columns(ws):
     for header in reversed(pic_headers):
         ws.insert_cols(1,1)
         col_num = find_col_index(ws, header)
-        column = ws[utils.get_column_letter(col_num)]
+        column = ws[get_column_letter(col_num)]
         for row_num, cell in enumerate(column):
             ws['A'][row_num].value = cell.value
         ws.delete_cols(col_num)
@@ -1283,7 +1303,7 @@ def sort_columns(ws):
         ws.insert_cols(1,1)
         col_num = find_col_index(ws, attribute)
         if col_num:
-            column = ws[utils.get_column_letter(col_num)]
+            column = ws[get_column_letter(col_num)]
             for row_num, cell in enumerate(column):
                 ws['A'][row_num].value = cell.value
             ws.delete_cols(col_num)
@@ -1292,7 +1312,7 @@ def sort_columns(ws):
 
     progress['value'] = 3
 
-    ws[utils.get_column_letter(ws.max_column+1)][0].value = 'МУСОР'
+    ws[get_column_letter(ws.max_column+1)][0].value = 'МУСОР'
     for row in ws.iter_rows(min_row=2):
         row[ws.max_column-1].value = '|'
 
@@ -1301,13 +1321,55 @@ def sort_columns(ws):
     for attribute in trash_attributes:
         col_num = find_col_index(ws, attribute)
         if col_num:
-            column = ws[utils.get_column_letter(col_num)]
-            write_column_letter = utils.get_column_letter(ws.max_column+1)
+            column = ws[get_column_letter(col_num)]
+            write_column_letter = get_column_letter(ws.max_column+1)
             for row_num, cell in enumerate(column):
                 ws[write_column_letter][row_num].value = cell.value
             ws.delete_cols(col_num)
 
     progress['value'] = 5
+
+def format_sheet(ws):
+    progress['value'] = 0
+    progress['maximum'] = 3
+
+    ws.sheet_view.zoomScale = 90
+    no_fill = PatternFill(fill_type=None)
+    side = Side(border_style=None)
+    no_border = Border(left=side, right=side, top=side, bottom=side)
+    font = Font(name='Times New Roman',
+                size=12,
+                bold=False,
+                italic=False,
+                vertAlign=None,
+                underline='none',
+                strike=False,
+                color='000000')
+    alignment = Alignment(horizontal='general',
+                          vertical='bottom',
+                          text_rotation=0,
+                          wrap_text=False,
+                          shrink_to_fit=False,
+                          indent=0)
+
+    progress['value'] = 1
+
+    for col_num, column in enumerate(ws.iter_cols()):
+        ws.column_dimensions[get_column_letter(col_num+1)].width = 12.9
+        for cell in column:
+            cell.font = font
+            cell.alignment = alignment
+            cell.hyperlink = None
+            cell.fill = no_fill
+            cell.border = no_border
+            cell.number_format = 'General'
+
+    progress['value'] = 2
+
+    for row_num in range(1, ws.max_row+1):
+        ws.row_dimensions[row_num].height = 15.5
+
+    progress['value'] = 3
 
 
 window = Tk()
@@ -1381,7 +1443,6 @@ format_sheet_check = BooleanVar()
 format_sheet_check.set(False)
 format_sheet_checkbutton = Checkbutton(window, variable=format_sheet_check, onvalue=True, offvalue=False, text='Форматировать')
 format_sheet_checkbutton.grid(row=10, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
-format_sheet_checkbutton['state'] = 'disabled'
 
 rewrite_check = BooleanVar()
 rewrite_check.set(False)
