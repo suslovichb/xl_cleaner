@@ -1139,6 +1139,8 @@ def clean():
     print("Done!")
     enable_buttons()
     messagebox.showinfo(title="Очистка", message="Готово!")
+    progress['value'] = 0
+    process_counter_label.grid_forget()
 
 def find_col_index(ws, col_name):
     for cell in ws[1]:
@@ -1329,9 +1331,13 @@ def sort_columns(ws):
 
     progress['value'] = 5
 
+def set_auto_filter(ws):
+    ws.auto_filter.ref = 'A1:{}{}'.format(get_column_letter(ws.max_column),
+                                          ws.max_row)
+
 def format_sheet(ws):
     progress['value'] = 0
-    progress['maximum'] = 3
+    progress['maximum'] = 5
 
     ws.sheet_view.zoomScale = 90
     no_fill = PatternFill(fill_type=None)
@@ -1340,6 +1346,14 @@ def format_sheet(ws):
     font = Font(name='Times New Roman',
                 size=12,
                 bold=False,
+                italic=False,
+                vertAlign=None,
+                underline='none',
+                strike=False,
+                color='000000')
+    bold_font = Font(name='Times New Roman',
+                size=12,
+                bold=True,
                 italic=False,
                 vertAlign=None,
                 underline='none',
@@ -1370,6 +1384,15 @@ def format_sheet(ws):
         ws.row_dimensions[row_num].height = 15.5
 
     progress['value'] = 3
+
+    set_auto_filter(ws)
+
+    progress['value'] = 4
+
+    for cell in ws[1]:
+        cell.font = bold_font
+
+    progress['value'] = 5
 
 
 window = Tk()
