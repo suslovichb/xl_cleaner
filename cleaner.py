@@ -9,6 +9,7 @@ from os import path, system
 
 REPLACEMENTS_PATH = "replacements.txt"
 SORT_SETTINGS_PATH = "sorting.txt"
+CATEGORY_ID_COLUMN_NAME = 'ID'
 
 codes_dict = {
 '&#09;': ' ',
@@ -1088,6 +1089,7 @@ def clean():
     if delete_tags_check.get(): processes_number += 1
     if replace_custom_check.get(): processes_number += 1
     if replace_letters_check.get(): processes_number += 1
+    if count_amounts_in_categories_check.get(): processes_number += 1
     if sort_columns_check.get(): processes_number += 1
     if format_sheet_check.get(): processes_number += 1
 
@@ -1097,7 +1099,7 @@ def clean():
         return
 
     update_counter_text(process_counter, processes_number)
-    process_counter_label.grid(row=13, column=0, columnspan=5, pady=(20,5))
+    process_counter_label.grid(row=14, column=0, columnspan=5, pady=(20,5))
 
     if delete_columns_check.get():
         process_counter += 1
@@ -1123,6 +1125,11 @@ def clean():
         process_counter += 1
         update_counter_text(process_counter, processes_number)
         replace_sku_letters(ws)
+
+    if count_amounts_in_categories_check.get():
+        process_counter += 1
+        update_counter_text(process_counter, processes_number)
+        count_amounts_in_categories(ws)
 
     if sort_columns_check.get():
         process_counter += 1
@@ -1395,9 +1402,27 @@ def format_sheet(ws):
     progress['value'] = 5
 
 
+def count_amounts_in_categories(ws):
+    id_col_num = find_col_index(ws, CATEGORY_ID_COLUMN_NAME)
+    if id_col_num:
+        amounts_of_categories = {}
+        id_column = ws[get_column_letter(id_col_num)]
+        for cell in id_column[1:]:
+            key = str(cell.value)
+            amounts_of_categories[key] = amounts_of_categories.get(key, 0) + 1
+        ws.insert_cols(id_col_num+1, 1)
+        amount_column = ws[get_column_letter(id_col_num+1)]
+        amount_column[0].value = 'Количество'
+        for row_num in range(1, ws.max_row):
+            amount_column[row_num].value = amounts_of_categories[str(id_column[row_num].value)]
+    else:
+        messagebox.showerror(title="Ошибка", message="Стоблец с ID категорий не найден")
+        return
+
+
 window = Tk()
 window.title('XL Cleaner')
-window.geometry('500x470')
+window.geometry('500x500')
 window.resizable(0, 0)
 
 secondary_button_style = Style()
@@ -1454,30 +1479,36 @@ replace_letters_check.set(False)
 replace_letters_checkbutton = Checkbutton(window, variable=replace_letters_check, onvalue=True, offvalue=False, text='Заменить буквы в sku')
 replace_letters_checkbutton.grid(row=8, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
 
+count_amounts_in_categories_check = BooleanVar()
+count_amounts_in_categories_check.set(False)
+count_amounts_in_categories_checkbutton = Checkbutton(window, variable=count_amounts_in_categories_check, onvalue=True, offvalue=False, text='Подсчитать количества в категориях')
+count_amounts_in_categories_checkbutton.grid(row=9, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
+
+
 sort_columns_check = BooleanVar()
 sort_columns_check.set(False)
 sort_columns_checkbutton = Checkbutton(window, variable=sort_columns_check, onvalue=True, offvalue=False, text='Сортировать столбцы', command=toggle_edit_sort_button)
-sort_columns_checkbutton.grid(row=9, column=0, columnspan=2, pady=(5,5), padx=16, sticky="w")
+sort_columns_checkbutton.grid(row=10, column=0, columnspan=2, pady=(5,5), padx=16, sticky="w")
 
 edit_sort_button = Button(window, text="Настройки", command=edit_sort, state = 'disabled', style='secondary.TButton')
-edit_sort_button.grid(row=9, column=1, columnspan=2, ipady=0, ipadx=0)
+edit_sort_button.grid(row=10, column=1, columnspan=2, ipady=0, ipadx=0)
 
 format_sheet_check = BooleanVar()
 format_sheet_check.set(False)
 format_sheet_checkbutton = Checkbutton(window, variable=format_sheet_check, onvalue=True, offvalue=False, text='Форматировать')
-format_sheet_checkbutton.grid(row=10, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
+format_sheet_checkbutton.grid(row=11, column=0, columnspan=5, pady=(5,5), padx=16, sticky="w")
 
 rewrite_check = BooleanVar()
 rewrite_check.set(False)
 rewrite_checkbutton = Checkbutton(window, variable=rewrite_check, onvalue=True, offvalue=False, text='Сохранить в исходный файл')
-rewrite_checkbutton.grid(row=11, column=0, columnspan=5, pady=(5,20), padx=16, sticky="w")
+rewrite_checkbutton.grid(row=12, column=0, columnspan=5, pady=(5,20), padx=16, sticky="w")
 
 clean_button = Button(window, text="ЗАПУСК", command=clean)
-clean_button.grid(row=12, column=0, columnspan=5)
+clean_button.grid(row=13, column=0, columnspan=5)
 
 progress = Progressbar(window, orient='horizontal', length=490, mode = 'determinate')
 progress['value'] = 0
-progress.grid(row=13, column=0, columnspan=5, padx=5, pady=(20,5))
+progress.grid(row=14, column=0, columnspan=5, padx=5, pady=(20,5))
 
 counter_text = StringVar()
 counter_text.set('counter')
