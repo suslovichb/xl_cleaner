@@ -1321,7 +1321,12 @@ def sort_columns(ws):
 
     progress['value'] = 3
 
-    ws[get_column_letter(ws.max_column+1)][0].value = 'МУСОР'
+    trash_header_cell = ws.cell(1, ws.max_column+1)
+    trash_header_cell.value = 'МУСОР'
+    trash_header_cell.fill = PatternFill(start_color='FF0000',
+                                         end_color='FF0000',
+                                         fill_type='solid')
+    trash_header_cell.font = Font(color = 'FFFFFF')
     for row in ws.iter_rows(min_row=2):
         row[ws.max_column-1].value = '|'
 
