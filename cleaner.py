@@ -1349,7 +1349,7 @@ def set_auto_filter(ws):
 
 def format_sheet(ws):
     progress['value'] = 0
-    progress['maximum'] = 5
+    progress['maximum'] = 6
 
     ws.sheet_view.zoomScale = 90
     no_fill = PatternFill(fill_type=None)
@@ -1406,6 +1406,9 @@ def format_sheet(ws):
 
     progress['value'] = 5
 
+    ws.freeze_panes = 'A2'
+
+    progress['value'] = 6
 
 def count_amounts_in_categories(ws):
     id_col_num = find_col_index(ws, CATEGORY_ID_COLUMN_NAME)
