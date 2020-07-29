@@ -1404,6 +1404,16 @@ def format_sheet(ws):
     for cell in ws[1]:
         cell.font = bold_font
 
+    trash_col_num = find_col_index(ws, 'МУСОР')
+    if trash_col_num:
+        trash_header_cell = ws.cell(1, trash_col_num)
+        trash_header_cell.fill = PatternFill(start_color='FF0000',
+                                             end_color='FF0000',
+                                             fill_type='solid')
+        trash_header_cell.font = Font(name='Times New Roman',
+                                      size=12,
+                                      bold=True,
+                                      color='FFFFFF')
     progress['value'] = 5
 
     ws.freeze_panes = 'A2'
