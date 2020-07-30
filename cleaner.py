@@ -1169,12 +1169,36 @@ def replace_sku_letters(ws):
         progress['value'] += 1
         progress.update()
 
-def delete_columns(ws):
-    progress["maximum"] = ws.max_column
+def get_sequences(list_of_ints):
     progress['value'] = 0
-    for index, column in reversed(list(enumerate(ws.iter_cols(values_only=True), start=1))):
-        if len(list(filter(None, column)))<=1 or column[0]==None:
-            ws.delete_cols(index, amount=1)
+    progress.update()
+    sequence_count = 1
+    sequences = []
+    for item in list_of_ints:
+        next_item = None
+        if list_of_ints.index(item) < (len(list_of_ints) - 1):
+            next_item = list_of_ints[list_of_ints.index(item) + 1]
+
+        if (item + 1) == next_item:
+            sequence_count += 1
+        else:
+            first_in_sequence = list_of_ints[list_of_ints.index(item) - sequence_count + 1]
+            sequences.append([first_in_sequence, sequence_count])
+            sequence_count = 1
+
+    return sequences
+
+def delete_columns(ws):
+    empty_cols_indices = []
+    for index, column in list(enumerate(ws.iter_cols(values_only=True), start=1)):
+        if not any(column[1:]) or column[0]==None:
+            empty_cols_indices.append(index)
+
+    empty_cols_sequences = get_sequences(empty_cols_indices)
+    progress["maximum"] = len(empty_cols_sequences)
+
+    for sequence in reversed(empty_cols_sequences):
+        ws.delete_cols(sequence[0], sequence[1])
         progress['value'] += 1
         progress.update()
 
