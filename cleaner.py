@@ -1286,9 +1286,14 @@ def edit_sort():
         with open(SORT_SETTINGS_PATH, 'w'): pass
     system('start ' + SORT_SETTINGS_PATH)
 
+def append_column(ws, column):
+    new_col_num = ws.max_column + 1
+    for row_num, cell in enumerate(column, start=1):
+        ws.cell(row=row_num, column=new_col_num, value=cell.value)
+
 def sort_columns(ws):
+    progress['maximum'] = 8
     progress['value'] = 0
-    progress['maximum'] = 5
 
     settings = {}
     try:
@@ -1319,31 +1324,49 @@ def sort_columns(ws):
         return
 
     progress['value'] = 1
+    progress.update()
 
-    pic_headers = [cell.value for cell in ws[1] if bool(re.search(r'^\d+_picture$', str(cell.value)))]
-    pic_headers.sort()
-    for header in reversed(pic_headers):
-        ws.insert_cols(1,1)
-        col_num = find_col_index(ws, header)
-        column = ws[get_column_letter(col_num)]
-        for row_num, cell in enumerate(column):
-            ws['A'][row_num].value = cell.value
-        ws.delete_cols(col_num)
+    initial_columns_quantity = ws.max_column
+    processed_columns_indices = []
 
-    progress['value'] = 2
-
-    for attribute in reversed(ordered_attributes):
-        ws.insert_cols(1,1)
+    for attribute in ordered_attributes:
         col_num = find_col_index(ws, attribute)
         if col_num:
             column = ws[get_column_letter(col_num)]
-            for row_num, cell in enumerate(column):
-                ws['A'][row_num].value = cell.value
-            ws.delete_cols(col_num)
+            append_column(ws, column)
+            processed_columns_indices.append(col_num)
         else:
-            ws['A'][0].value = attribute
+            ws.cell(row=1, column=ws.max_column+1, value=str(attribute))
+
+    progress['value'] = 2
+    progress.update()
+
+    pic_headers = [[index, cell.value] for index, cell in enumerate(ws[1], start=1) if bool(re.search(r'^\d+_picture$', str(cell.value)))]
+    pic_headers.sort(key=lambda x: x[1])
+    for header in pic_headers:
+        column = ws[get_column_letter(header[0])]
+        append_column(ws, column)
+        processed_columns_indices.append(header[0])
 
     progress['value'] = 3
+    progress.update()
+
+    trash_columns_indices = []
+    for attribute in trash_attributes:
+        col_num = find_col_index(ws, attribute)
+        if col_num:
+            trash_columns_indices.append(col_num)
+
+    progress['value'] = 4
+    progress.update()
+
+    undefined_columns_indices = [index for index in range(1, initial_columns_quantity+1) if index not in processed_columns_indices+trash_columns_indices]
+    for index in undefined_columns_indices:
+        column = ws[get_column_letter(index)]
+        append_column(ws, column)
+
+    progress['value'] = 5
+    progress.update()
 
     trash_header_cell = ws.cell(1, ws.max_column+1)
     trash_header_cell.value = 'МУСОР'
@@ -1354,18 +1377,21 @@ def sort_columns(ws):
     for row in ws.iter_rows(min_row=2):
         row[ws.max_column-1].value = '|'
 
-    progress['value'] = 4
+    progress['value'] = 6
+    progress.update()
 
-    for attribute in trash_attributes:
-        col_num = find_col_index(ws, attribute)
-        if col_num:
-            column = ws[get_column_letter(col_num)]
-            write_column_letter = get_column_letter(ws.max_column+1)
-            for row_num, cell in enumerate(column):
-                ws[write_column_letter][row_num].value = cell.value
-            ws.delete_cols(col_num)
+    for index in trash_columns_indices:
+        column = ws[get_column_letter(index)]
+        append_column(ws, column)
+        processed_columns_indices.append(index)
 
-    progress['value'] = 5
+    progress['value'] = 7
+    progress.update()
+
+    ws.delete_cols(1, initial_columns_quantity)
+
+    progress['value'] = 8
+    progress.update()
 
 def set_auto_filter(ws):
     ws.auto_filter.ref = 'A1:{}{}'.format(get_column_letter(ws.max_column),
