@@ -1141,13 +1141,19 @@ def clean():
         update_counter_text(process_counter, processes_number)
         format_sheet(ws)
 
-    save_workbook(wb)
-
-    print("Done!")
-    enable_buttons()
-    messagebox.showinfo(title="Очистка", message="Готово!")
-    progress['value'] = 0
-    process_counter_label.grid_forget()
+    try:
+        save_workbook(wb)
+    except PermissionError:
+        messagebox.showerror(title="Ошибка", message='Ошибка доступа')
+    else:
+        print("Done!")
+        messagebox.showinfo(title="Очистка", message="Готово!")
+    finally:
+        progress['value'] = 0
+        progress.update()
+        process_counter_label.grid_forget()
+        enable_buttons()
+        return
 
 def find_col_index(ws, col_name):
     for cell in ws[1]:
