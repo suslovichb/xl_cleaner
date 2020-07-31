@@ -1157,6 +1157,7 @@ def find_col_index(ws, col_name):
 def replace_sku_letters(ws):
     progress['maximum'] = ws.max_row - 2
     progress['value'] = 0
+    progress.update()
     col_num = find_col_index(ws, 'sku')
     if not col_num:
         messagebox.showerror(title="Ошибка", message="Столбец sku не найден")
@@ -1189,6 +1190,8 @@ def get_sequences(list_of_ints):
     return sequences
 
 def delete_columns(ws):
+    progress['value'] = 0
+    progress.update()
     empty_cols_indices = []
     for index, column in list(enumerate(ws.iter_cols(values_only=True), start=1)):
         if not any(column[1:]) or column[0]==None:
@@ -1205,6 +1208,7 @@ def delete_columns(ws):
 def replace_codes(ws):
     progress['maximum'] = ws.max_row
     progress['value'] = 0
+    progress.update()
     for row in ws.iter_rows():
         row = tuple([replace_in_cell(cell, codes_dict) for cell in row])
         progress['value'] += 1
@@ -1218,6 +1222,7 @@ def replace_in_cell(cell, dict):
 def replace_custom(ws):
     progress['maximum'] = ws.max_row
     progress['value'] = 0
+    progress.update()
     custom_dict = {}
     try:
         f = open('replacements.txt', 'r', encoding='utf8')
@@ -1246,6 +1251,7 @@ def replace_custom(ws):
 def delete_tags(ws):
     progress['value'] = 0
     progress['maximum'] = ws.max_row
+    progress.update()
     for row in ws.iter_rows():
         row = tuple([delete_tags_in_cell(cell) for cell in row])
         progress['value'] += 1
@@ -1294,6 +1300,7 @@ def append_column(ws, column):
 def sort_columns(ws):
     progress['maximum'] = 8
     progress['value'] = 0
+    progress.update()
 
     settings = {}
     try:
@@ -1400,6 +1407,7 @@ def set_auto_filter(ws):
 def format_sheet(ws):
     progress['value'] = 0
     progress['maximum'] = 6
+    progress.update()
 
     ws.sheet_view.zoomScale = 90
     no_fill = PatternFill(fill_type=None)
@@ -1429,6 +1437,7 @@ def format_sheet(ws):
                           indent=0)
 
     progress['value'] = 1
+    progress.update()
 
     for col_num, column in enumerate(ws.iter_cols()):
         ws.column_dimensions[get_column_letter(col_num+1)].width = 12.9
@@ -1441,15 +1450,18 @@ def format_sheet(ws):
             cell.number_format = 'General'
 
     progress['value'] = 2
+    progress.update()
 
     for row_num in range(1, ws.max_row+1):
         ws.row_dimensions[row_num].height = 15.5
 
     progress['value'] = 3
+    progress.update()
 
     set_auto_filter(ws)
 
     progress['value'] = 4
+    progress.update()
 
     for cell in ws[1]:
         cell.font = bold_font
@@ -1465,25 +1477,38 @@ def format_sheet(ws):
                                       bold=True,
                                       color='FFFFFF')
     progress['value'] = 5
+    progress.update()
 
     ws.freeze_panes = 'A2'
 
     progress['value'] = 6
+    progress.update()
 
 def count_amounts_in_categories(ws):
+    progress['maximum'] = 1
+    progress['value'] = 0
+    progress.update()
     id_col_num = find_col_index(ws, CATEGORY_ID_COLUMN_NAME)
     if id_col_num:
         amounts_of_categories = {}
         id_column = ws[get_column_letter(id_col_num)]
+        progress['maximum'] = ws.max_row * 2 -2
+        progress.update()
         for cell in id_column[1:]:
+            progress['value'] += 1
+            progress.update()
             key = str(cell.value)
             amounts_of_categories[key] = amounts_of_categories.get(key, 0) + 1
         ws.insert_cols(id_col_num+1, 1)
         amount_column = ws[get_column_letter(id_col_num+1)]
         amount_column[0].value = 'Количество'
         for row_num in range(1, ws.max_row):
+            progress['value'] += 1
+            progress.update()
             amount_column[row_num].value = amounts_of_categories[str(id_column[row_num].value)]
     else:
+        progress['value'] = 1
+        progress.update()
         messagebox.showerror(title="Ошибка", message="Стоблец с ID категорий не найден")
         return
 
