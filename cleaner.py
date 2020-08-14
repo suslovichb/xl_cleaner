@@ -1387,8 +1387,8 @@ def sort_columns(ws):
                                          end_color='FF0000',
                                          fill_type='solid')
     trash_header_cell.font = Font(color = 'FFFFFF')
-    for row in ws.iter_rows(min_row=2):
-        row[ws.max_column-1].value = '|'
+    for cell in ws[get_column_letter(ws.max_column)][1:]:
+        cell.value = '|'
 
     progress['value'] = 6
     progress.update()
